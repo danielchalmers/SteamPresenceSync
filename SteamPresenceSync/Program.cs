@@ -6,7 +6,7 @@ namespace SteamPresenceSync;
 
 class Program
 {
-    private const string SteamRegistryPath = @"Software\Valve\Steam\ActiveProcess";
+    private const string SteamRegistryPath = @"Software\Valve\Steam";
     private const string RunningAppIdValueName = "RunningAppID";
     private const int DebounceSeconds = 60;
     private const int MaxRetries = 3;
@@ -16,6 +16,7 @@ class Program
     private static bool _isInGameMode = false;
     private static Timer? _debounceTimer = null;
     private static readonly object _lock = new object();
+    private static bool _isInitialized = false;
 
     // Win32 API constants for registry change notifications
     private const int REG_NOTIFY_CHANGE_LAST_SET = 0x00000004;
@@ -34,7 +35,6 @@ class Program
         Log($"Monitoring registry key: HKEY_CURRENT_USER\\{SteamRegistryPath}\\{RunningAppIdValueName}");
         Log($"Debounce period: {DebounceSeconds} seconds");
         Log($"Max retries: {MaxRetries}");
-        Log("Using event-based registry monitoring (not polling)");
 
         // Check initial state
         CheckSteamStatus();
@@ -115,7 +115,16 @@ class Program
             // Check if the app ID has changed
             if (!_lastAppId.HasValue || currentAppId != _lastAppId.Value)
             {
+                // Skip logging and processing the initial null -> 0 transition
+                if (!_isInitialized && currentAppId == 0)
+                {
+                    _lastAppId = currentAppId;
+                    _isInitialized = true;
+                    return;
+                }
+                
                 Log($"App ID changed: {_lastAppId?.ToString() ?? "null"} -> {currentAppId}");
+                _isInitialized = true;
                 
                 lock (_lock)
                 {
@@ -125,11 +134,23 @@ class Program
                     // Cancel existing debounce timer if any
                     _debounceTimer?.Dispose();
                     
-                    // Start debounce timer
-                    _debounceTimer = new Timer(OnDebounceComplete, currentAppId, 
-                        TimeSpan.FromSeconds(DebounceSeconds), Timeout.InfiniteTimeSpan);
+                    bool isGameStarting = currentAppId != 0;
                     
-                    Log($"Debounce timer started, will process change in {DebounceSeconds} seconds...");
+                    if (isGameStarting)
+                    {
+                        // Game starting - no debounce, set status immediately
+                        Log($"Game detected (AppID: {currentAppId}), setting status to Online immediately");
+                        SetSteamStatus("online");
+                        _isInGameMode = true;
+                    }
+                    else
+                    {
+                        // Game ending - use debounce to wait and see if user launches another game
+                        _debounceTimer = new Timer(OnDebounceComplete, currentAppId, 
+                            TimeSpan.FromSeconds(DebounceSeconds), Timeout.InfiniteTimeSpan);
+                        
+                        Log($"Game closed, debounce timer started. Will set status to Offline in {DebounceSeconds} seconds if no new game starts...");
+                    }
                 }
             }
         }
@@ -148,28 +169,14 @@ class Program
             lock (_lock)
             {
                 // Verify the app ID hasn't changed during debounce period
-                if (_lastAppId.HasValue && _lastAppId.Value == currentAppId)
+                if (_lastAppId.HasValue && _lastAppId.Value == currentAppId && currentAppId == 0)
                 {
-                    bool shouldBeInGameMode = currentAppId != 0;
-                    
-                    // Only take action if state needs to change
-                    if (shouldBeInGameMode != _isInGameMode)
-                    {
-                        if (shouldBeInGameMode)
-                        {
-                            Log($"Debounce complete. Game detected (AppID: {currentAppId}), setting status to Online");
-                            SetSteamStatus("online");
-                            _isInGameMode = true;
-                        }
-                        else
-                        {
-                            Log("Debounce complete. No game running (AppID: 0), setting status to Offline");
-                            SetSteamStatus("offline");
-                            _isInGameMode = false;
-                        }
-                    }
+                    // Only set to offline after debounce - game mode should already be false
+                    Log("Debounce complete. No game started, setting status to Offline");
+                    SetSteamStatus("offline");
+                    _isInGameMode = false;
                 }
-                else
+                else if (_lastAppId.HasValue && _lastAppId.Value != currentAppId)
                 {
                     Log("App ID changed during debounce period, action cancelled");
                 }

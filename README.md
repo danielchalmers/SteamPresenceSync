@@ -9,13 +9,13 @@ Steam Presence Sync is a Windows background application that monitors your Steam
 ## Features
 - 🎮 **Automatic Status Management**: Seamlessly toggles your Steam status based on game activity
 - ⚡ **Event-Based Monitoring**: Uses Windows registry change notifications instead of polling - no constant CPU usage
-- ⏱️ **60-Second Debounce**: Prevents rapid status changes from quick game launches/closes
+- ⏱️ **Smart Debounce**: Instantly goes online when a game starts, but waits 60 seconds after closing to see if you launch another game
 - 🔄 **Retry Logic**: Attempts up to 3 times with exponential backoff to ensure status changes succeed
 - 📝 **Comprehensive Logging**: All actions are logged with timestamps for easy monitoring
 - 🪟 **Background Operation**: Runs quietly in the background with no UI
 
 ## How It Works
-The application uses Windows registry change notifications to monitor the `HKEY_CURRENT_USER\Software\Valve\Steam\ActiveProcess\RunningAppID` registry key. When Steam launches or closes a game, the registry value changes and triggers an event, which the application responds to. This event-based approach means the application only runs when changes occur, not constantly polling. It uses the Steam browser protocol (`steam://friends/status/...`) to update your status.
+The application uses Windows registry change notifications to monitor the `HKEY_CURRENT_USER\Software\Valve\Steam\RunningAppID` registry key. When Steam launches or closes a game, the registry value changes and triggers an event, which the application responds to. This event-based approach means the application only runs when changes occur, not constantly polling. It uses the Steam browser protocol (`steam://friends/status/...`) to update your status.
 
 ## Building and Running
 

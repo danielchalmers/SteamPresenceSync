@@ -1,0 +1,31 @@
+name: Release
+
+on:
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-dotnet@v5
+
+      - name: Build
+        run: dotnet publish "SteamPresenceSync/SteamPresenceSync.csproj" -o "publish" -c Release -r win-x64
+
+      - uses: dotnet/nbgv@v0.4.2
+        id: nbgv
+
+      - name: Create GitHub release
+        uses: ncipollo/release-action@v1
+        with:
+          tag: "v${{ steps.nbgv.outputs.SimpleVersion }}"
+          artifacts: "publish/*.exe"
+          allowUpdates: true
+          removeArtifacts: true
+          replacesArtifacts: true
+          artifactErrorsFailBuild: true
+          makeLatest: true
+          generateReleaseNotes: true
+          prerelease: ${{ !steps.nbgv.outputs.PublicRelease }}

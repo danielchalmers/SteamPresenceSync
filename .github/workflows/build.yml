@@ -1,0 +1,16 @@
+name: Build
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  deploy:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-dotnet@v5
+
+      - name: Build
+        run: dotnet build

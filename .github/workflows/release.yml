@@ -13,8 +13,16 @@ jobs:
 
       - uses: actions/setup-dotnet@v5
 
-      - name: Build
-        run: dotnet publish "SteamPresenceSync/SteamPresenceSync.csproj" -o "publish" -c Release -r win-x64
+      - name: Build win-x64
+        run: dotnet publish "SteamPresenceSync/SteamPresenceSync.csproj" -o "publish/win-x64" -c Release -r win-x64 -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:SelfContained=true
+
+      - name: Build win-arm64
+        run: dotnet publish "SteamPresenceSync/SteamPresenceSync.csproj" -o "publish/win-arm64" -c Release -r win-arm64 -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:SelfContained=true
+      
+      - name: Rename executables
+        run: |
+          mv publish/win-x64/SteamPresenceSync.exe publish/win-x64/SteamPresenceSync-x64.exe
+          mv publish/win-arm64/SteamPresenceSync.exe publish/win-arm64/SteamPresenceSync-arm64.exe
 
       - uses: dotnet/nbgv@v0.4.2
         id: nbgv
@@ -23,7 +31,7 @@ jobs:
         uses: ncipollo/release-action@v1
         with:
           tag: "v${{ steps.nbgv.outputs.SimpleVersion }}"
-          artifacts: "publish/*.exe"
+          artifacts: "publish/win-x64/*.exe,publish/win-arm64/*.exe"
           allowUpdates: true
           removeArtifacts: true
           replacesArtifacts: true

@@ -14,7 +14,7 @@ jobs:
       - uses: actions/setup-dotnet@v5
 
       - name: Build
-        run: dotnet publish "SteamPresenceSync/SteamPresenceSync.csproj" -o "publish" -c Release -r win-x64
+        run: dotnet publish "SteamPresenceSync/SteamPresenceSync.csproj" -o "publish" -c Release -r win-x64 -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:SelfContained=true
 
       - uses: dotnet/nbgv@v0.4.2
         id: nbgv

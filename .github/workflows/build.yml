@@ -9,6 +9,8 @@ jobs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0 # Need full history for git versioning
 
       - uses: actions/setup-dotnet@v5
 

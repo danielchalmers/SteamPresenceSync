@@ -21,8 +21,8 @@ jobs:
       
       - name: Rename executables
         run: |
-          mv publish/win-x64/SteamPresenceSync.exe publish/win-x64/SteamPresenceSync-x64.exe
-          mv publish/win-arm64/SteamPresenceSync.exe publish/win-arm64/SteamPresenceSync-arm64.exe
+          Move-Item publish/win-x64/SteamPresenceSync.exe publish/win-x64/SteamPresenceSync-x64.exe
+          Move-Item publish/win-arm64/SteamPresenceSync.exe publish/win-arm64/SteamPresenceSync-arm64.exe
 
       - uses: dotnet/nbgv@v0.4.2
         id: nbgv

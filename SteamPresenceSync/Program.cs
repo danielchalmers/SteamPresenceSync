@@ -108,10 +108,13 @@ class Program
 
             var currentAppId = Convert.ToInt32(value);
 
+            // Capture the old value before checking if changed
+            var previousAppId = _changeHandler.LastAppId;
+
             // Check if the app ID has changed
             if (_changeHandler.ShouldProcessChange(currentAppId))
             {
-                Log($"App ID changed: {_changeHandler.LastAppId?.ToString() ?? "null"} -> {currentAppId}");
+                Log($"App ID changed: {previousAppId?.ToString() ?? "null"} -> {currentAppId}");
 
                 lock (_lock)
                 {

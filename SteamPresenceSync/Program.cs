@@ -4,6 +4,84 @@ using System.Runtime.InteropServices;
 
 namespace SteamPresenceSync;
 
+// Helper class for Steam status operations
+public static class SteamStatusManager
+{
+    public static string BuildStatusUri(string status) => $"steam://friends/status/{status}";
+    
+    public static void SetStatus(string status, int maxRetries, Action<string> log)
+    {
+        for (int attempt = 1; attempt <= maxRetries; attempt++)
+        {
+            try
+            {
+                string steamUri = BuildStatusUri(status);
+                log($"Attempt {attempt}/{maxRetries}: Setting status via {steamUri}");
+
+                ProcessStartInfo psi = new ProcessStartInfo
+                {
+                    FileName = steamUri,
+                    UseShellExecute = true
+                };
+
+                Process.Start(psi);
+                log($"Successfully set status to: {status}");
+                return;
+            }
+            catch (Exception ex)
+            {
+                log($"Attempt {attempt}/{maxRetries} failed: {ex.Message}");
+                
+                if (attempt < maxRetries)
+                {
+                    int sleepMs = 1000 * attempt;
+                    log($"Waiting {sleepMs}ms before retry...");
+                    Thread.Sleep(sleepMs);
+                }
+            }
+        }
+
+        log($"Failed to set status after {maxRetries} attempts");
+    }
+}
+
+// Helper class for handling app ID changes
+public class AppIdChangeHandler
+{
+    public int? LastAppId { get; private set; }
+    public bool IsInitialized { get; private set; }
+    
+    public bool ShouldProcessChange(int currentAppId)
+    {
+        // Skip logging and processing the initial null -> 0 transition
+        if (!IsInitialized && currentAppId == 0)
+        {
+            LastAppId = currentAppId;
+            IsInitialized = true;
+            return false;
+        }
+        
+        // Check if the app ID has changed
+        bool hasChanged = !LastAppId.HasValue || currentAppId != LastAppId.Value;
+        
+        if (hasChanged)
+        {
+            LastAppId = currentAppId;
+            IsInitialized = true;
+        }
+        
+        return hasChanged;
+    }
+    
+    public bool IsGameStarting(int appId) => appId != 0;
+    
+    public void Reset()
+    {
+        LastAppId = null;
+        IsInitialized = false;
+    }
+}
+
 class Program
 {
     private const string SteamRegistryPath = @"Software\Valve\Steam";
@@ -11,12 +89,10 @@ class Program
     private const int DebounceSeconds = 60;
     private const int MaxRetries = 3;
     
-    private static int? _lastAppId = null;
+    private static readonly AppIdChangeHandler _changeHandler = new AppIdChangeHandler();
     private static DateTime _lastChangeTime = DateTime.MinValue;
-    private static bool _isInGameMode = false;
     private static Timer? _debounceTimer = null;
     private static readonly object _lock = new object();
-    private static bool _isInitialized = false;
 
     // Win32 API constants for registry change notifications
     private const int REG_NOTIFY_CHANGE_LAST_SET = 0x00000004;
@@ -102,10 +178,10 @@ class Program
             if (value == null)
             {
                 // Registry key doesn't exist - this happens when Steam is not running
-                if (_lastAppId != null)
+                if (_changeHandler.LastAppId != null)
                 {
                     Log("Registry value not found.");
-                    _lastAppId = null;
+                    _changeHandler.Reset();
                 }
                 return;
             }
@@ -113,35 +189,24 @@ class Program
             int currentAppId = Convert.ToInt32(value);
 
             // Check if the app ID has changed
-            if (!_lastAppId.HasValue || currentAppId != _lastAppId.Value)
+            if (_changeHandler.ShouldProcessChange(currentAppId))
             {
-                // Skip logging and processing the initial null -> 0 transition
-                if (!_isInitialized && currentAppId == 0)
-                {
-                    _lastAppId = currentAppId;
-                    _isInitialized = true;
-                    return;
-                }
-                
-                Log($"App ID changed: {_lastAppId?.ToString() ?? "null"} -> {currentAppId}");
-                _isInitialized = true;
+                Log($"App ID changed: {_changeHandler.LastAppId?.ToString() ?? "null"} -> {currentAppId}");
                 
                 lock (_lock)
                 {
-                    _lastAppId = currentAppId;
                     _lastChangeTime = DateTime.Now;
                     
                     // Cancel existing debounce timer if any
                     _debounceTimer?.Dispose();
                     
-                    bool isGameStarting = currentAppId != 0;
+                    bool isGameStarting = _changeHandler.IsGameStarting(currentAppId);
                     
                     if (isGameStarting)
                     {
                         // Game starting - no debounce, set status immediately
                         Log($"Game detected (AppID: {currentAppId}), setting status to Online immediately");
-                        SetSteamStatus("online");
-                        _isInGameMode = true;
+                        SteamStatusManager.SetStatus("online", MaxRetries, Log);
                     }
                     else
                     {
@@ -169,14 +234,13 @@ class Program
             lock (_lock)
             {
                 // Verify the app ID hasn't changed during debounce period
-                if (_lastAppId.HasValue && _lastAppId.Value == currentAppId && currentAppId == 0)
+                if (_changeHandler.LastAppId.HasValue && _changeHandler.LastAppId.Value == currentAppId && currentAppId == 0)
                 {
-                    // Only set to offline after debounce - game mode should already be false
+                    // Only set to offline after debounce
                     Log("Debounce complete. No game started, setting status to Offline");
-                    SetSteamStatus("offline");
-                    _isInGameMode = false;
+                    SteamStatusManager.SetStatus("offline", MaxRetries, Log);
                 }
-                else if (_lastAppId.HasValue && _lastAppId.Value != currentAppId)
+                else if (_changeHandler.LastAppId.HasValue && _changeHandler.LastAppId.Value != currentAppId)
                 {
                     Log("App ID changed during debounce period, action cancelled");
                 }
@@ -186,41 +250,6 @@ class Program
         {
             Log($"Error in debounce callback: {ex.Message}");
         }
-    }
-
-    private static void SetSteamStatus(string status)
-    {
-        for (int attempt = 1; attempt <= MaxRetries; attempt++)
-        {
-            try
-            {
-                string steamUri = $"steam://friends/status/{status}";
-                Log($"Attempt {attempt}/{MaxRetries}: Setting status via {steamUri}");
-
-                ProcessStartInfo psi = new ProcessStartInfo
-                {
-                    FileName = steamUri,
-                    UseShellExecute = true
-                };
-
-                Process.Start(psi);
-                Log($"Successfully set status to: {status}");
-                return; // Success, exit retry loop
-            }
-            catch (Exception ex)
-            {
-                Log($"Attempt {attempt}/{MaxRetries} failed: {ex.Message}");
-                
-                if (attempt < MaxRetries)
-                {
-                    int sleepMs = 1000 * attempt; // Exponential backoff
-                    Log($"Waiting {sleepMs}ms before retry...");
-                    Thread.Sleep(sleepMs);
-                }
-            }
-        }
-
-        Log($"Failed to set status after {MaxRetries} attempts");
     }
 
     private static void Log(string message)

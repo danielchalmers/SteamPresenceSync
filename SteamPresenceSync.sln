@@ -5,6 +5,8 @@ VisualStudioVersion = 17.0.31903.59
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SteamPresenceSync", "SteamPresenceSync\SteamPresenceSync.csproj", "{02881F88-9884-4519-BF29-03C679D92981}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SteamPresenceSync.Tests", "SteamPresenceSync.Tests\SteamPresenceSync.Tests.csproj", "{FC3F8DD2-06B0-425B-AEE7-B0FA09B63299}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -27,6 +29,18 @@ Global
 		{02881F88-9884-4519-BF29-03C679D92981}.Release|x64.Build.0 = Release|Any CPU
 		{02881F88-9884-4519-BF29-03C679D92981}.Release|x86.ActiveCfg = Release|Any CPU
 		{02881F88-9884-4519-BF29-03C679D92981}.Release|x86.Build.0 = Release|Any CPU
+		{FC3F8DD2-06B0-425B-AEE7-B0FA09B63299}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FC3F8DD2-06B0-425B-AEE7-B0FA09B63299}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FC3F8DD2-06B0-425B-AEE7-B0FA09B63299}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{FC3F8DD2-06B0-425B-AEE7-B0FA09B63299}.Debug|x64.Build.0 = Debug|Any CPU
+		{FC3F8DD2-06B0-425B-AEE7-B0FA09B63299}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{FC3F8DD2-06B0-425B-AEE7-B0FA09B63299}.Debug|x86.Build.0 = Debug|Any CPU
+		{FC3F8DD2-06B0-425B-AEE7-B0FA09B63299}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FC3F8DD2-06B0-425B-AEE7-B0FA09B63299}.Release|Any CPU.Build.0 = Release|Any CPU
+		{FC3F8DD2-06B0-425B-AEE7-B0FA09B63299}.Release|x64.ActiveCfg = Release|Any CPU
+		{FC3F8DD2-06B0-425B-AEE7-B0FA09B63299}.Release|x64.Build.0 = Release|Any CPU
+		{FC3F8DD2-06B0-425B-AEE7-B0FA09B63299}.Release|x86.ActiveCfg = Release|Any CPU
+		{FC3F8DD2-06B0-425B-AEE7-B0FA09B63299}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

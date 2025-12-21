@@ -6,13 +6,18 @@ public class AppIdChangeHandler
     public int? LastAppId { get; private set; }
     public bool IsInitialized { get; private set; }
     
+    public void Initialize(int currentAppId)
+    {
+        LastAppId = currentAppId;
+        IsInitialized = true;
+    }
+    
     public bool ShouldProcessChange(int currentAppId)
     {
         // Skip logging and processing the initial null -> 0 transition
         if (!IsInitialized && currentAppId == 0)
         {
-            LastAppId = currentAppId;
-            IsInitialized = true;
+            Initialize(currentAppId);
             return false;
         }
         
@@ -21,8 +26,7 @@ public class AppIdChangeHandler
         
         if (hasChanged)
         {
-            LastAppId = currentAppId;
-            IsInitialized = true;
+            Initialize(currentAppId);
         }
         
         return hasChanged;

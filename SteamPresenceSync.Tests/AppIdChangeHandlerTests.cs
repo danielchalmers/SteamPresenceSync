@@ -93,6 +93,17 @@ public class AppIdChangeHandlerTests
         Assert.False(handler.IsInitialized);
     }
 
+    [Fact]
+    public void Initialize_SetsState()
+    {
+        var handler = new AppIdChangeHandler();
+        
+        handler.Initialize(42);
+        
+        Assert.Equal(42, handler.LastAppId);
+        Assert.True(handler.IsInitialized);
+    }
+
     [Theory]
     [InlineData(0, 123, true)]
     [InlineData(123, 456, true)]

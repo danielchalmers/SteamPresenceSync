@@ -98,7 +98,13 @@ class Program
             if (value == null)
             {
                 // Registry key doesn't exist - this happens when Steam is not running
-                if (_changeHandler.LastAppId != null)
+                if (!_changeHandler.IsInitialized)
+                {
+                    Log("Steam not running on startup. Setting status to Offline");
+                    _changeHandler.Initialize(0);
+                    SteamStatusManager.SetStatus("offline", MaxRetries, Log);
+                }
+                else if (_changeHandler.LastAppId != null)
                 {
                     Log("Registry value not found.");
                     _changeHandler.Reset();
@@ -107,6 +113,23 @@ class Program
             }
 
             var currentAppId = Convert.ToInt32(value);
+            if (!_changeHandler.IsInitialized)
+            {
+                _changeHandler.Initialize(currentAppId);
+
+                if (_changeHandler.IsGameStarting(currentAppId))
+                {
+                    Log($"Initial state: game detected (AppID: {currentAppId}), setting status to Online");
+                    SteamStatusManager.SetStatus("online", MaxRetries, Log);
+                }
+                else
+                {
+                    Log("Initial state: no game detected, setting status to Offline");
+                    SteamStatusManager.SetStatus("offline", MaxRetries, Log);
+                }
+
+                return;
+            }
 
             // Capture the old value before checking if changed
             var previousAppId = _changeHandler.LastAppId;
